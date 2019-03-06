@@ -3,12 +3,19 @@ import pygame
 from pygame import Rect, Surface
 import random
 import os
-import kezmenu
 
-from tetrominoes import list_of_tetrominoes
-from tetrominoes import rotate
+try:
+    import kezmenu
+    from tetrominoes import list_of_tetrominoes
+    from tetrominoes import rotate
+    from scores import load_score, write_score
+except ImportError:
+    import MaTris.kezmenu as kezmenu
+    from MaTris.tetrominoes import list_of_tetrominoes
+    from MaTris.tetrominoes import rotate
+    from MaTris.scores import load_score, write_score
 
-from scores import load_score, write_score
+
 
 USE_SOUND = False
 
@@ -41,7 +48,7 @@ VISIBLE_MATRIX_HEIGHT = MATRIX_HEIGHT - 2
 
 
 class Matris(object):
-    def __init__(self):
+    def __init__(self, screen):
         self.surface = screen.subsurface(Rect((MATRIS_OFFSET+BORDERWIDTH, MATRIS_OFFSET+BORDERWIDTH),
                                               (MATRIX_WIDTH * BLOCKSIZE, (MATRIX_HEIGHT-2) * BLOCKSIZE)))
 
@@ -112,6 +119,20 @@ class Matris(object):
         """
         Main game loop
         """
+        print("Game info:")
+        print("- Score:", self.score)
+        print("Matrix occupied:")
+        print([entry for entry in self.matrix if self.matrix[entry]])
+        print("Current tetromino")
+        print("- Shape:", self.current_tetromino.shape)
+        print("- Rotation:", self.tetromino_rotation)
+        print("- Position:", self.tetromino_position)
+        print("Next tetromino")
+        print("- Shape:", self.next_tetromino.shape)
+        print()
+        print("-----------------")
+        print()
+
         self.needs_redraw = False
 
         pressed = lambda key: event.type == pygame.KEYDOWN and event.key == key
@@ -433,15 +454,17 @@ class Game(object):
         Main loop for game
         Redraws scores and next tetromino each time the loop is passed through
         """
+        self.screen = screen
+
         clock = pygame.time.Clock()
 
-        self.matris = Matris()
+        self.matris = Matris(screen)
 
-        screen.blit(construct_nightmare(screen.get_size()), (0,0))
+        self.screen.blit(construct_nightmare(screen.get_size()), (0,0))
 
         matris_border = Surface((MATRIX_WIDTH*BLOCKSIZE+BORDERWIDTH*2, VISIBLE_MATRIX_HEIGHT*BLOCKSIZE+BORDERWIDTH*2))
         matris_border.fill(BORDERCOLOR)
-        screen.blit(matris_border, (MATRIS_OFFSET,MATRIS_OFFSET))
+        self.screen.blit(matris_border, (MATRIS_OFFSET,MATRIS_OFFSET))
 
         self.redraw()
 
@@ -507,7 +530,7 @@ class Game(object):
         area.blit(linessurf, (0, levelsurf.get_rect().height + scoresurf.get_rect().height))
         area.blit(combosurf, (0, levelsurf.get_rect().height + scoresurf.get_rect().height + linessurf.get_rect().height))
 
-        screen.blit(area, area.get_rect(bottom=HEIGHT-MATRIS_OFFSET, centerx=TRICKY_CENTERX))
+        self.screen.blit(area, area.get_rect(bottom=HEIGHT-MATRIS_OFFSET, centerx=TRICKY_CENTERX))
 
 
     def blit_next_tetromino(self, tetromino_surf):
@@ -525,7 +548,7 @@ class Game(object):
         center = areasize/2 - tetromino_surf_size/2
         area.blit(tetromino_surf, (center, center))
 
-        screen.blit(area, area.get_rect(top=MATRIS_OFFSET, centerx=TRICKY_CENTERX))
+        self.screen.blit(area, area.get_rect(top=MATRIS_OFFSET, centerx=TRICKY_CENTERX))
 
 class Menu(object):
     """
@@ -599,9 +622,13 @@ def construct_nightmare(size):
     return surf
 
 
-if __name__ == '__main__':
+def start_game():
     pygame.init()
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("MaTris")
     Menu().main(screen)
+
+
+if __name__ == '__main__':
+    start_game()
