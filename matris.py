@@ -16,7 +16,8 @@ class GameOver(Exception):
     """Exception used for its control flow properties"""
 
 def get_sound(filename):
-    return pygame.mixer.Sound(os.path.join(os.path.dirname(__file__), "resources", filename))
+    if USE_SOUND:
+        return pygame.mixer.Sound(os.path.join(os.path.dirname(__file__), "resources", filename))
 
 BGCOLOR = (15, 15, 20)
 BORDERCOLOR = (140, 140, 140)
