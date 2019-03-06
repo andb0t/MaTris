@@ -10,6 +10,8 @@ from tetrominoes import rotate
 
 from scores import load_score, write_score
 
+USE_SOUND = False
+
 class GameOver(Exception):
     """Exception used for its control flow properties"""
 
@@ -68,7 +70,7 @@ class Matris(object):
         self.lines = 0
 
         self.combo = 1 # Combo will increase when you clear lines with several tetrominos in a row
-        
+
         self.paused = False
 
         self.highscore = load_score()
@@ -92,7 +94,7 @@ class Matris(object):
         self.tetromino_block = self.block(self.current_tetromino.color)
         self.shadow_block = self.block(self.current_tetromino.color, shadow=True)
 
-    
+
     def hard_drop(self):
         """
         Instantly places tetrominos in the cells below
@@ -110,7 +112,7 @@ class Matris(object):
         Main game loop
         """
         self.needs_redraw = False
-        
+
         pressed = lambda key: event.type == pygame.KEYDOWN and event.key == key
         unpressed = lambda key: event.type == pygame.KEYUP and event.key == key
 
@@ -169,7 +171,7 @@ class Matris(object):
         if self.movement_keys_timer > self.movement_keys_speed:
             self.request_movement('right' if self.movement_keys['right'] else 'left')
             self.movement_keys_timer %= self.movement_keys_speed
-        
+
         return self.needs_redraw
 
     def draw_surface(self):
@@ -188,9 +190,9 @@ class Matris(object):
                 else:
                     if with_tetromino[(y,x)][0] == 'shadow':
                         self.surface.fill(BGCOLOR, block_location)
-                    
+
                     self.surface.blit(with_tetromino[(y,x)][1], block_location)
-                    
+
     def gameover(self, full_exit=False):
         """
         Gameover occurs when a new tetromino does not fit after the old one has died, either
@@ -199,7 +201,7 @@ class Matris(object):
         """
 
         write_score(self.score)
-        
+
         if full_exit:
             exit()
         else:
@@ -228,7 +230,7 @@ class Matris(object):
                     return False
 
         return position
-                    
+
 
     def request_rotation(self):
         """
@@ -250,12 +252,12 @@ class Matris(object):
         if position and self.blend(shape, position):
             self.tetromino_rotation = rotation
             self.tetromino_position = position
-            
+
             self.needs_redraw = True
             return self.tetromino_rotation
         else:
             return False
-            
+
     def request_movement(self, direction):
         """
         Checks if teteromino can move in the given direction and returns its new position if movement is possible
@@ -315,7 +317,7 @@ class Matris(object):
         boxarr = pygame.PixelArray(box)
         for x in range(len(boxarr)):
             for y in range(len(boxarr)):
-                boxarr[x][y] = tuple(list(map(lambda c: min(255, int(c*random.uniform(0.8, 1.2))), colors[color])) + end) 
+                boxarr[x][y] = tuple(list(map(lambda c: min(255, int(c*random.uniform(0.8, 1.2))), colors[color])) + end)
 
         del boxarr # deleting boxarr or else the box surface will be 'locked' or something like that and won't blit.
         border.blit(box, Rect(borderwidth, borderwidth, 0, 0))
@@ -334,17 +336,18 @@ class Matris(object):
         self.lines += lines_cleared
 
         if lines_cleared:
-            if lines_cleared >= 4:
+            if USE_SOUND and lines_cleared >= 4:
                 self.linescleared_sound.play()
             self.score += 100 * (lines_cleared**2) * self.combo
 
             if not self.played_highscorebeaten_sound and self.score > self.highscore:
-                if self.highscore != 0:
+                if USE_SOUND and self.highscore != 0:
                     self.highscorebeaten_sound.play()
                 self.played_highscorebeaten_sound = True
 
         if self.lines >= self.level*10:
-            self.levelup_sound.play()
+            if USE_SOUND:
+                self.levelup_sound.play()
             self.level += 1
 
         self.combo = self.combo + 1 if lines_cleared else 1
@@ -352,9 +355,10 @@ class Matris(object):
         self.set_tetrominoes()
 
         if not self.blend():
-            self.gameover_sound.play()
+            if USE_SOUND:
+                self.gameover_sound.play()
             self.gameover()
-            
+
         self.needs_redraw = True
 
     def remove_lines(self):
@@ -385,7 +389,7 @@ class Matris(object):
         """
         Does `shape` at `position` fit in `matrix`? If so, return a new copy of `matrix` where all
         the squares of `shape` have been placed in `matrix`. Otherwise, return False.
-        
+
         This method is often used simply as a test, for example to see if an action by the player is valid.
         It is also used in `self.draw_surface` to paint the falling tetromino and its shadow on the screen.
         """
@@ -431,13 +435,13 @@ class Game(object):
         clock = pygame.time.Clock()
 
         self.matris = Matris()
-        
+
         screen.blit(construct_nightmare(screen.get_size()), (0,0))
-        
+
         matris_border = Surface((MATRIX_WIDTH*BLOCKSIZE+BORDERWIDTH*2, VISIBLE_MATRIX_HEIGHT*BLOCKSIZE+BORDERWIDTH*2))
         matris_border.fill(BORDERCOLOR)
         screen.blit(matris_border, (MATRIS_OFFSET,MATRIS_OFFSET))
-        
+
         self.redraw()
 
         while True:
@@ -447,7 +451,7 @@ class Game(object):
                     self.redraw()
             except GameOver:
                 return
-      
+
 
     def redraw(self):
         """
@@ -479,23 +483,23 @@ class Game(object):
             surf.blit(text, text.get_rect(top=BORDERWIDTH+10, left=BORDERWIDTH+10))
             surf.blit(val, val.get_rect(top=BORDERWIDTH+10, right=width-(BORDERWIDTH+10)))
             return surf
-        
+
         #Resizes side panel to allow for all information to be display there.
         scoresurf = renderpair("Score", self.matris.score)
         levelsurf = renderpair("Level", self.matris.level)
         linessurf = renderpair("Lines", self.matris.lines)
         combosurf = renderpair("Combo", "x{}".format(self.matris.combo))
 
-        height = 20 + (levelsurf.get_rect().height + 
+        height = 20 + (levelsurf.get_rect().height +
                        scoresurf.get_rect().height +
-                       linessurf.get_rect().height + 
+                       linessurf.get_rect().height +
                        combosurf.get_rect().height )
-        
+
         #Colours side panel
         area = Surface((width, height))
         area.fill(BORDERCOLOR)
         area.fill(BGCOLOR, Rect(BORDERWIDTH, BORDERWIDTH, width-BORDERWIDTH*2, height-BORDERWIDTH*2))
-        
+
         #Draws side panel
         area.blit(levelsurf, (0,0))
         area.blit(scoresurf, (0, levelsurf.get_rect().height))
@@ -537,7 +541,7 @@ class Menu(object):
         menu.enableEffect('enlarge-font-on-focus', font=None, size=60, enlarge_factor=1.2, enlarge_time=0.3)
         menu.color = (255,255,255)
         menu.focus_color = (40, 200, 40)
-        
+
         nightmare = construct_nightmare(screen.get_size())
         highscoresurf = self.construct_highscoresurf() #Loads highscore onto menu
 
@@ -554,7 +558,7 @@ class Menu(object):
 
             timepassed = clock.tick(30) / 1000.
 
-            if timepassed > 1: # A game has most likely been played 
+            if timepassed > 1: # A game has most likely been played
                 highscoresurf = self.construct_highscoresurf()
 
             screen.blit(nightmare, (0,0))
