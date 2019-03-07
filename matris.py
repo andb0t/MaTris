@@ -18,6 +18,7 @@ except ImportError:
 
 
 USE_SOUND = False
+VERBOSE = False
 
 class GameOver(Exception):
     """Exception used for its control flow properties"""
@@ -115,28 +116,23 @@ class Matris(object):
         self.lock_tetromino()
 
 
-    def update(self, timepassed):
+    def update(self, timepassed, autoplay=None):
         """
         Main game loop
         """
-        print("Game info:")
-        print("- Score:", self.score)
-        print("Matrix occupied:")
-        print([entry for entry in self.matrix if self.matrix[entry]])
-        print("Current tetromino")
-        print("- Shape:", self.current_tetromino.shape)
-        print("- Rotation:", self.tetromino_rotation)
-        print("- Position:", self.tetromino_position)
-        print("Next tetromino")
-        print("- Shape:", self.next_tetromino.shape)
-        print()
-        print("-----------------")
-        print()
+        if autoplay:
+            autoplay.log(matrix=self.matrix,
+                         current_tetromino=self.current_tetromino,
+                         next_tetromino=self.next_tetromino,
+                         tetromino_rotation=self.tetromino_rotation,
+                         tetromino_position=self.tetromino_position,
+                         score=self.score)
+            autoplay.decide()
 
         self.needs_redraw = False
 
-        pressed = lambda key: event.type == pygame.KEYDOWN and event.key == key
-        unpressed = lambda key: event.type == pygame.KEYUP and event.key == key
+        pressed = lambda key: event and event.type == pygame.KEYDOWN and event.key == key
+        unpressed = lambda key: event and event.type == pygame.KEYUP and event.key == key
 
         events = pygame.event.get()
         #Controls pausing and quitting the game.
@@ -153,26 +149,52 @@ class Matris(object):
         if self.paused:
             return self.needs_redraw
 
+        if autoplay:
+            events.append(None)
+
         for event in events:
             #Controls movement of the tetromino
-            if pressed(pygame.K_SPACE):
+            if (autoplay and autoplay.k_space) or pressed(pygame.K_SPACE):
+                if VERBOSE:
+                    print("space")
                 self.hard_drop()
-            elif pressed(pygame.K_UP) or pressed(pygame.K_w):
+            elif (autoplay and autoplay.k_up) or pressed(pygame.K_UP) or pressed(pygame.K_w):
+                if VERBOSE:
+                    print("up")
                 self.request_rotation()
-            elif pressed(pygame.K_LEFT) or pressed(pygame.K_a):
+            elif (autoplay and autoplay.k_left) or pressed(pygame.K_LEFT) or pressed(pygame.K_a):
+                if VERBOSE:
+                    print("left")
                 self.request_movement('left')
                 self.movement_keys['left'] = 1
-            elif pressed(pygame.K_RIGHT) or pressed(pygame.K_d):
+            elif (autoplay and autoplay.k_right) or pressed(pygame.K_RIGHT) or pressed(pygame.K_d):
+                if VERBOSE:
+                    print("right")
                 self.request_movement('right')
                 self.movement_keys['right'] = 1
 
+            elif autoplay and autoplay.k_pass:
+                if VERBOSE:
+                    print("pass")
+                self.movement_keys['left'] = 0
+                self.movement_keys['right'] = 0
+                self.movement_keys_timer = (-self.movement_keys_speed)*2
             elif unpressed(pygame.K_LEFT) or unpressed(pygame.K_a):
+                if VERBOSE:
+                    print("no left")
                 self.movement_keys['left'] = 0
                 self.movement_keys_timer = (-self.movement_keys_speed)*2
             elif unpressed(pygame.K_RIGHT) or unpressed(pygame.K_d):
+                if VERBOSE:
+                    print("no right")
                 self.movement_keys['right'] = 0
                 self.movement_keys_timer = (-self.movement_keys_speed)*2
-
+            elif autoplay and autoplay.k_down:
+                if VERBOSE:
+                    print("down")
+            else:
+                if VERBOSE:
+                    print("IMPOSSIBLE")
 
 
 
@@ -180,6 +202,7 @@ class Matris(object):
 
         self.downwards_timer += timepassed
         downwards_speed = self.downwards_speed*0.10 if any([pygame.key.get_pressed()[pygame.K_DOWN],
+                                                            (autoplay and autoplay.k_down),
                                                             pygame.key.get_pressed()[pygame.K_s]]) else self.downwards_speed
         if self.downwards_timer > downwards_speed:
             if not self.request_movement('down'): #Places tetromino if it cannot move further down
@@ -449,12 +472,13 @@ class Matris(object):
         return surf
 
 class Game(object):
-    def main(self, screen):
+    def main(self, screen, autoplay=None):
         """
         Main loop for game
         Redraws scores and next tetromino each time the loop is passed through
         """
         self.screen = screen
+        self.autoplay = autoplay
 
         clock = pygame.time.Clock()
 
@@ -471,7 +495,7 @@ class Game(object):
         while True:
             try:
                 timepassed = clock.tick(50)
-                if self.matris.update((timepassed / 1000.) if not self.matris.paused else 0):
+                if self.matris.update((timepassed / 1000.) if not self.matris.paused else 0, autoplay):
                     self.redraw()
             except GameOver:
                 return
@@ -622,12 +646,15 @@ def construct_nightmare(size):
     return surf
 
 
-def start_game():
+def start_game(autoplay=None):
     pygame.init()
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("MaTris")
-    Menu().main(screen)
+    if autoplay:
+        Game().main(screen, autoplay)
+    else:
+        Menu().main(screen)
 
 
 if __name__ == '__main__':
