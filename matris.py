@@ -494,7 +494,10 @@ class Game(object):
 
         while True:
             try:
-                timepassed = clock.tick(50)
+                if self.autoplay and self.autoplay.speedup:
+                    timepassed = clock.tick(5000)
+                else:
+                    timepassed = clock.tick(50)
                 if self.matris.update((timepassed / 1000.) if not self.matris.paused else 0, autoplay):
                     self.redraw()
             except GameOver:
