@@ -121,12 +121,12 @@ class Matris(object):
         Main game loop
         """
         if autoplay:
-            autoplay.log(matrix=self.matrix,
-                         current_tetromino=self.current_tetromino,
-                         next_tetromino=self.next_tetromino,
-                         tetromino_rotation=self.tetromino_rotation,
-                         tetromino_position=self.tetromino_position,
-                         score=self.score)
+            autoplay.record(matrix=self.matrix,
+                            current_tetromino=self.current_tetromino,
+                            next_tetromino=self.next_tetromino,
+                            tetromino_rotation=self.tetromino_rotation,
+                            tetromino_position=self.tetromino_position,
+                            score=self.score)
             autoplay.decide()
 
         self.needs_redraw = False
