@@ -49,7 +49,8 @@ VISIBLE_MATRIX_HEIGHT = MATRIX_HEIGHT - 2
 
 
 class Matris(object):
-    def __init__(self, screen):
+    def __init__(self, screen, autoplay):
+        self.autoplay = autoplay
         self.surface = screen.subsurface(Rect((MATRIS_OFFSET+BORDERWIDTH, MATRIS_OFFSET+BORDERWIDTH),
                                               (MATRIX_WIDTH * BLOCKSIZE, (MATRIX_HEIGHT-2) * BLOCKSIZE)))
 
@@ -116,18 +117,18 @@ class Matris(object):
         self.lock_tetromino()
 
 
-    def update(self, timepassed, autoplay=None):
+    def update(self, timepassed):
         """
         Main game loop
         """
-        if autoplay:
-            autoplay.record(matrix=self.matrix,
-                            current_tetromino=self.current_tetromino,
-                            next_tetromino=self.next_tetromino,
-                            tetromino_rotation=self.tetromino_rotation,
-                            tetromino_position=self.tetromino_position,
-                            score=self.score)
-            autoplay.decide()
+        if self.autoplay:
+            self.autoplay.record(matrix=self.matrix,
+                                 current_tetromino=self.current_tetromino,
+                                 next_tetromino=self.next_tetromino,
+                                 tetromino_rotation=self.tetromino_rotation,
+                                 tetromino_position=self.tetromino_position,
+                                 score=self.score)
+            self.autoplay.decide()
 
         self.needs_redraw = False
 
@@ -149,31 +150,31 @@ class Matris(object):
         if self.paused:
             return self.needs_redraw
 
-        if autoplay:
+        if self.autoplay:
             events.append(None)
 
         for event in events:
             #Controls movement of the tetromino
-            if (autoplay and autoplay.k_space) or pressed(pygame.K_SPACE):
+            if (self.autoplay and self.autoplay.k_space) or pressed(pygame.K_SPACE):
                 if VERBOSE:
                     print("space")
                 self.hard_drop()
-            elif (autoplay and autoplay.k_up) or pressed(pygame.K_UP) or pressed(pygame.K_w):
+            elif (self.autoplay and self.autoplay.k_up) or pressed(pygame.K_UP) or pressed(pygame.K_w):
                 if VERBOSE:
                     print("up")
                 self.request_rotation()
-            elif (autoplay and autoplay.k_left) or pressed(pygame.K_LEFT) or pressed(pygame.K_a):
+            elif (self.autoplay and self.autoplay.k_left) or pressed(pygame.K_LEFT) or pressed(pygame.K_a):
                 if VERBOSE:
                     print("left")
                 self.request_movement('left')
                 self.movement_keys['left'] = 1
-            elif (autoplay and autoplay.k_right) or pressed(pygame.K_RIGHT) or pressed(pygame.K_d):
+            elif (self.autoplay and self.autoplay.k_right) or pressed(pygame.K_RIGHT) or pressed(pygame.K_d):
                 if VERBOSE:
                     print("right")
                 self.request_movement('right')
                 self.movement_keys['right'] = 1
 
-            elif autoplay and autoplay.k_pass:
+            elif self.autoplay and self.autoplay.k_pass:
                 if VERBOSE:
                     print("pass")
                 self.movement_keys['left'] = 0
@@ -189,7 +190,7 @@ class Matris(object):
                     print("no right")
                 self.movement_keys['right'] = 0
                 self.movement_keys_timer = (-self.movement_keys_speed)*2
-            elif autoplay and autoplay.k_down:
+            elif self.autoplay and self.autoplay.k_down:
                 if VERBOSE:
                     print("down")
             else:
@@ -202,7 +203,7 @@ class Matris(object):
 
         self.downwards_timer += timepassed
         downwards_speed = self.downwards_speed*0.10 if any([pygame.key.get_pressed()[pygame.K_DOWN],
-                                                            (autoplay and autoplay.k_down),
+                                                            (self.autoplay and self.autoplay.k_down),
                                                             pygame.key.get_pressed()[pygame.K_s]]) else self.downwards_speed
         if self.downwards_timer > downwards_speed:
             if not self.request_movement('down'): #Places tetromino if it cannot move further down
@@ -482,7 +483,7 @@ class Game(object):
 
         clock = pygame.time.Clock()
 
-        self.matris = Matris(screen)
+        self.matris = Matris(screen, self.autoplay)
 
         self.screen.blit(construct_nightmare(screen.get_size()), (0,0))
 
@@ -498,7 +499,7 @@ class Game(object):
                     timepassed = clock.tick(5000)
                 else:
                     timepassed = clock.tick(50)
-                if self.matris.update((timepassed / 1000.) if not self.matris.paused else 0, autoplay):
+                if self.matris.update((timepassed / 1000.) if not self.matris.paused else 0):
                     self.redraw()
             except GameOver:
                 return
